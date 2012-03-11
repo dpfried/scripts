@@ -1,0 +1,45 @@
+#!/bin/bash
+
+cal_port=10515
+username=dfried
+tunnel_machine=lec.cs.arizona.edu
+search_string="10515:.*:515"
+
+case "$1" in
+open)
+if ps ax | grep "$search_string" | grep -v grep > /dev/null
+then
+echo "LPD tunnel already open."
+exit 0
+fi
+
+echo "Opening LPD tunnel..."
+ssh $username@$tunnel_machine -f -N -L 10515:printer.cs.arizona.edu:515 
+echo "Done."
+;;
+close)
+my_pid=`ps ax | grep "$search_string" | grep -v grep | awk '{print $1}'`
+
+if [ -z $my_pid ]
+then
+echo "LPD tunnel not open."
+exit 0
+fi
+
+echo "Closing LPD tunnel..."
+kill -9 $my_pid
+if ps ax | grep "$search_string" | grep -v grep > /dev/null
+then 
+echo "FAILED!"
+exit 1
+fi
+echo "Done."
+;;
+*)
+N="print-tunnel"
+echo "Usage: $N {open|close}" >&2
+exit 1
+;;
+esac
+
+exit 0

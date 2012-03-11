@@ -1,0 +1,28 @@
+#!/bin/bash
+
+command="gnome-panel"
+ps_grep="ps ax | grep \"$command\$\" | grep -v grep"
+
+echo $ps_grep
+if $ps_grep > /dev/null
+then
+    echo "already running"
+    kill -9 `$ps_grep | awk '{print $1}'`
+    if $ps_grep > /dev/null
+    then 
+        echo "FAILED - could not kill!"
+        exit 1
+    else
+        exit 0
+    fi
+else
+    echo "not running"
+    $command &!
+    if $ps_grep > /dev/null
+    then 
+        exit 0
+    else
+        echo "FAILED - could not start"
+        exit 2
+    fi
+fi

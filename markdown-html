@@ -1,0 +1,11 @@
+#!/bin/bash
+
+cat << _EOF_ > $1.html
+<HTML>
+<HEAD>
+</HEAD>
+<BODY>
+$(markdown $1.markdown)
+</BODY>
+</HTML>
+_EOF_

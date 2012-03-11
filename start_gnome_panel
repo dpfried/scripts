@@ -1,0 +1,42 @@
+#!/bin/bash
+
+command="gnome-panel"
+
+case "$1" in
+open)
+if ps ax | grep "$command\$" | grep -v grep > /dev/null
+then
+echo "$command already open."
+exit 0
+fi
+
+echo "Opening $command"
+$command &!
+echo "Done."
+;;
+close)
+my_pid=`ps ax | grep "$command\$" | grep -v grep | awk '{print $1}'`
+echo $my_pid
+
+if [ -z $my_pid ]
+then
+echo "$command not open."
+exit 0
+fi
+
+echo "Closing $command"
+kill -9 $my_pid
+if ps ax | grep "$command\$" | grep -v grep > /dev/null
+then 
+echo "FAILED!"
+exit 1
+fi
+echo "Done."
+;;
+*)
+echo "Usage: $0 {open|close}" >&2
+exit 1
+;;
+esac
+
+exit 0
