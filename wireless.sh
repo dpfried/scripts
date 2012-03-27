@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 iwconfig wlan0 2>&1 | grep -q no\ wireless\ extensions\. && {
   echo wired
@@ -38,6 +38,17 @@ case $bars in
    *)  bar='[--!--]';;
 esac
 
-echo $status, $essid $bar
+`echo $status | grep "^connected" 1>/dev/null 2>&1`
+if [[ "$?" -ne "0" ]]
+then
+    color='#FF0000'
+fi
+
+if [ -z $color ]
+then
+    echo $essid $bar
+else
+    echo "<fc=$color>$essid $bar</fc>"
+fi
 
 exit 0
