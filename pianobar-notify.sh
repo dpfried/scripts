@@ -12,6 +12,7 @@ songstart)
 # echo "$title -- $artist" > $HOME/.config/pianobar/nowplaying
 # # or whatever you like...
 notify-send "Pianobar - $stationName" "Now Playing: $artist - $title"
+echo "$artist - $title" > /home/dfried/.config/pianobar/nowplaying
 ;;
 
 songfinish)
@@ -20,11 +21,13 @@ songfinish)
 if [ -n "$songDuration" ] &&
 [ $(echo "scale=4; ($songPlayed/$songDuration*100)>50" | bc) -eq 1 ] &&
 [ "$rating" -ne 2 ]; then
-# scrobbler-helper is part of the Audio::Scrobble package at cpan
-# "pia" is the last.fm client identifier of "pianobar", don't use
-# it for anything else, please
-python /home/dfried/scripts/scrobble.py "songfinish" "title=$title" "artist=$artist" "album=$album" "songDuration=$songDuration" "songPlayed=$songPlayed" &
+    (echo album="$album";
+    echo artist="$artist";
+    echo title="$title";
+    echo songDuration="$songDuration";
+    echo songPlayed="$songPlayed") | /home/dfried/scripts/scrobble.py songfinish
 fi
+rm -f /home/dfried/.config/pianobar/nowplaying
 ;;
 
 *)
