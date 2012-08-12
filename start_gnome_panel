@@ -1,6 +1,6 @@
 #!/bin/bash
 
-command="gnome-panel"
+command="unity-2d-panel"
 
 case "$1" in
 open)
