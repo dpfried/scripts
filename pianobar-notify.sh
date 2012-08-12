@@ -1,5 +1,8 @@
 #!/bin/bash
 # create variables
+now_playing="/home/dfried/.config/pianobar/nowplaying"
+scrobbler="/home/dfried/scripts/scrobble.py"
+
 while read L; do
 k="`echo "$L" | cut -d '=' -f 1`"
 v="`echo "$L" | cut -d '=' -f 2`"
@@ -12,7 +15,7 @@ songstart)
 # echo "$title -- $artist" > $HOME/.config/pianobar/nowplaying
 # # or whatever you like...
 notify-send "Pianobar - $stationName" "Now Playing: $artist - $title"
-echo "$artist - $title" > /home/dfried/.config/pianobar/nowplaying
+echo "$artist - $title" > $now_playing
 ;;
 
 songfinish)
@@ -25,10 +28,15 @@ if [ -n "$songDuration" ] &&
     echo artist="$artist";
     echo title="$title";
     echo songDuration="$songDuration";
-    echo songPlayed="$songPlayed") | /home/dfried/scripts/scrobble.py songfinish
+    echo songPlayed="$songPlayed") | $scrobbler songfinish
 fi
-rm -f /home/dfried/.config/pianobar/nowplaying
+rm -f $now_playing
 ;;
+
+exit)
+rm -f $now_playing
+;;
+
 
 *)
 if [ "$pRet" -ne 1 ]; then
