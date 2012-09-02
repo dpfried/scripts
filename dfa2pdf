@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+# with help from http://jamie-wong.com/2010/10/16/dfas-and-graphviz-dot/
+
+require "yaml"
+require "tempfile"
+
+def dot_output(dfa)
+  lines = []
+  lines << "digraph dfa {"
+  lines << %(\t rankdir=LR)
+  lines << %(\t"" [shape=none])
+
+  lines << %(\t"" [shape=none])
+
+  dfa['states'].each do |state|
+    label = (dfa['labels'] && dfa['labels'][state]) || state
+    if (dfa['final'].include? state)
+      lines << %(\t"#{state}" [label=\"#{label}\", shape=doublecircle])
+    else
+      lines << %(\t"#{state}" [label=\"#{label}\", shape=circle])
+    end
+  end
+
+  lines << ''
+  lines << %(\t"" -> "#{dfa['initial']}")
+
+  dfa['transitions'].each do |start,pair_array|
+    pair_array.each do |sym,targ|
+      if sym.is_a? String or sym.is_a? Fixnum
+         lines << %(\t"#{start}" -> "#{targ}" [label="#{sym}"])
+       else
+         lines << %(\t"#{start}" -> "#{targ}" [label="[#{sym.collect(&:to_s).join(',')}]"])
+      end
+    end
+  end
+
+  lines << "}"
+
+  return lines.join("\n")
+end
+
+unless ARGV[0]
+    $stderr.puts "usage: dfa2svg <filename>.dfa"
+    exit! 1
+end
+
+ARGV.each do |filename|
+    base = File.basename(filename, '.*')
+    dfa = File.open(filename) { |yf| YAML::load(yf) }
+
+    tmp = Tempfile.new('dfa2svg')
+    tmp.write dot_output(dfa)
+    #puts dot_output(dfa)
+    tmp.close
+
+    if `which dot`.empty?
+        $stderr.puts "error: this program needs graphviz to run and can't find dot"
+        exit! 1
+    end
+
+    # if `which dot2tex`.empty?
+    #     `dot -Tsvg < #{tmp.path} > figs/#{base}.svg`
+    # else
+    #     `dot2tex --figonly #{tmp.path} > figs/#{base}.tex`
+    # end
+
+    `dot -Tsvg < #{tmp.path} > #{tmp.path}.svg`
+    `cairosvg #{tmp.path}.svg -fpdf > figs/#{base}.pdf`
+end

@@ -14,7 +14,7 @@ songstart)
 # echo 'naughty.notify({title = "pianobar", text = "Now playing: ' "$title" ' by ' "$artist" '"})' | awesome-client -
 # echo "$title -- $artist" > $HOME/.config/pianobar/nowplaying
 # # or whatever you like...
-notify-send "Pianobar - $stationName" "Now Playing: $artist - $title"
+notify-send "$stationName" "$artist - $title"
 echo "$artist - $title" > $now_playing
 ;;
 
