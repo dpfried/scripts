@@ -14,11 +14,43 @@ end
 def combine(d1, d2, operation)
     states = d1['states'].product d2['states']
 
-
     alphabet = d1['alphabet'] || d2['alphabet'] || [0, 1]
 
     t1 = d1['transitions']
     t2 = d2['transitions']
+
+    initial = [d1['initial'], d2['initial']]
+
+    # inefficient way to reduce complexity of state machine
+    changed = true
+    while changed
+        changed = false
+
+        states_incoming = {}
+        states.each {|state| states_incoming[state] = 0}
+
+
+        states.each do |state| 
+            s1, s2 = state
+            alphabet.each do |c|
+                pair = lookup_transition(t1, s1, c), lookup_transition(t2, s2, c)
+                if pair != state
+                    states_incoming[pair] += 1
+                end
+            end
+        end
+
+        # remove nodes at beginning
+        states = states.select do |state| 
+            if states_incoming[state] == 0 and state != initial
+                puts "removing #{state}"
+                changed = true
+                false
+            else
+                true
+            end
+        end
+    end
 
     transitions = {}
 
@@ -26,13 +58,13 @@ def combine(d1, d2, operation)
         s1, s2 = state
         map = []
         alphabet.each do |c|
-            state = make_state(lookup_transition(t1, s1, c), lookup_transition(t2, s2, c))
-            map << [c, state]
+            pair = lookup_transition(t1, s1, c), lookup_transition(t2, s2, c)
+            if states.find pair
+                map << [c, make_state(*pair)]
+            end
         end
         transitions[make_state(s1, s2)] = map
     end
-
-    initial = make_state(d1['initial'], d2['initial'])
 
     f1 = Array(d1['final'])
     f2 = Array(d2['final'])
@@ -50,7 +82,7 @@ def combine(d1, d2, operation)
     combined['final'] = final.collect {|x, y| make_state(x,y)}
 
     combined['transitions'] = transitions
-    combined['initial'] = initial
+    combined['initial'] = make_state(*initial)
 
     combined
 end
