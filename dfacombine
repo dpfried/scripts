@@ -1,0 +1,83 @@
+#!/usr/bin/env ruby
+# with help from http://jamie-wong.com/2010/10/16/dfas-and-graphviz-dot/
+
+require "yaml"
+
+def lookup_transition(table, state, c)
+    table[state][c]
+end
+
+def make_state(s1,s2)
+    "#{s1},#{s2}"
+end
+
+def combine(d1, d2, operation)
+    states = d1['states'].product d2['states']
+
+
+    alphabet = d1['alphabet'] || d2['alphabet'] || [0, 1]
+
+    t1 = d1['transitions']
+    t2 = d2['transitions']
+
+    transitions = {}
+
+    states.each do |state| 
+        s1, s2 = state
+        map = []
+        alphabet.each do |c|
+            state = make_state(lookup_transition(t1, s1, c), lookup_transition(t2, s2, c))
+            map << [c, state]
+        end
+        transitions[make_state(s1, s2)] = map
+    end
+
+    initial = make_state(d1['initial'], d2['initial'])
+
+    f1 = Array(d1['final'])
+    f2 = Array(d2['final'])
+
+    final = states.select do |x,y| 
+        if operation == :intersection
+            f1.index x  and f2.index y  
+        else
+            f1.index x  or f2.index y  
+        end
+    end
+
+    combined = {}
+    combined['states'] = states.collect {|x,y| make_state(x, y)}
+    combined['final'] = final.collect {|x, y| make_state(x,y)}
+
+    combined['transitions'] = transitions
+    combined['initial'] = initial
+
+    combined
+end
+
+unless ARGV[0]
+    $stderr.puts "usage: dfa2svg [union|intersection] <filename1>.dfa <filename2>.dfa <outfile>.dfa"
+    exit! 1
+end
+
+type = ARGV[0]
+filename1 = ARGV[1]
+filename2 = ARGV[2]
+outfile = ARGV[3]
+
+base1 = File.basename(filename1, '.*')
+form1 = File.open(filename1) { |yf| YAML::load(yf) }
+
+base2 = File.basename(filename2, '.*')
+form2 = File.open(filename2) { |yf| YAML::load(yf) }
+
+if type == "union"
+    dfa = combine(form1, form2, :union)
+elsif type == "intersection"
+    dfa = combine(form1, form2, :intersection)
+else
+    $stderr.puts "bad join type, should be union or intersection"
+    exit! 1
+end
+
+out = File.open(outfile, 'w') { |f| f.write(YAML::dump(dfa)) }
