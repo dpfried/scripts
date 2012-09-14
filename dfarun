@@ -1,0 +1,131 @@
+#!/usr/bin/env ruby
+# with help from http://jamie-wong.com/2010/10/16/dfas-and-graphviz-dot/
+
+require "yaml"
+require "tempfile"
+
+def dot_output(dfa)
+  lines = []
+  lines << "digraph dfa {"
+  lines << %(\t rankdir=LR)
+  lines << %(\t"" [shape=none])
+
+  lines << %(\t"" [shape=none])
+
+  dfa['states'].each do |state|
+    label = (dfa['labels'] && dfa['labels'][state]) || state
+    if (dfa['final'].include? state)
+      lines << %(\t"#{state}" [label=\"#{label}\", shape=doublecircle])
+    else
+      lines << %(\t"#{state}" [label=\"#{label}\", shape=circle])
+    end
+  end
+
+  lines << ''
+  lines << %(\t"" -> "#{dfa['initial']}")
+
+  dfa['transitions'].each do |start,pair_array|
+    pair_array.each do |sym,targ|
+      if sym.is_a? String or sym.is_a? Fixnum
+         lines << %(\t"#{start}" -> "#{targ}" [label="#{sym}"])
+       else
+         lines << %(\t"#{start}" -> "#{targ}" [label="[#{sym.collect(&:to_s).join(',')}]"])
+      end
+    end
+  end
+
+  lines << "}"
+
+  return lines.join("\n")
+end
+
+def lookup_transition(table, state, c)
+    (table[state].assoc c)[1]
+end
+
+def make_state(s1,s2)
+    "#{s1},#{s2}"
+end
+
+def combine(d1, d2, operation)
+    states = d1['states'].product d2['states']
+
+
+    alphabet = d1['alphabet'] || d2['alphabet'] || [0, 1]
+
+    t1 = d1['transitions']
+    t2 = d2['transitions']
+
+    transitions = {}
+
+    states.each do |state| 
+        s1, s2 = state
+        map = []
+        alphabet.each do |c|
+            state = make_state(lookup_transition(t1, s1, c), lookup_transition(t2, s2, c))
+            map << [c, state]
+        end
+        transitions[make_state(s1, s2)] = map
+    end
+
+    initial = make_state(d1['initial'], d2['initial'])
+
+    f1 = Array(d1['final'])
+    f2 = Array(d2['final'])
+
+    final = states.select do |x,y| 
+        if operation == :intersection
+            f1.index x  and f2.index y  
+        else
+            f1.index x  or f2.index y  
+        end
+    end
+
+    combined = {}
+    combined['states'] = states.collect {|x,y| make_state(x, y)}
+    combined['final'] = final.collect {|x, y| make_state(x,y)}
+
+    combined['transitions'] = transitions
+    combined['initial'] = initial
+
+    combined
+end
+
+unless ARGV[0]
+    $stderr.puts "usage: dfa2svg <filename>.dfa"
+    exit! 1
+end
+
+ARGV.each do |filename|
+    base = File.basename(filename, '.*')
+    form = File.open(filename) { |yf| YAML::load(yf) }
+
+    if form.include? "union"
+        d1, d2 = form["union"]
+        dfa = combine(d1, d2, :union)
+    elsif form.include? "intersection"
+        d1, d2 = form["intersection"]
+        dfa = combine(d1, d2, :intersection)
+    else
+        dfa = form
+    end
+
+    tmp = Tempfile.new('dfa2svg')
+    tmp.write dot_output(dfa)
+    #puts dot_output(dfa)
+    tmp.close
+
+    if `which dot`.empty?
+        $stderr.puts "error: this program needs graphviz to run and can't find dot"
+        exit! 1
+    end
+
+    # if `which dot2tex`.empty?
+    #     `dot -Tsvg < #{tmp.path} > figs/#{base}.svg`
+    # else
+    #     `dot2tex --figonly #{tmp.path} > figs/#{base}.tex`
+    # end
+
+    `dot -Tsvg < #{tmp.path} > #{tmp.path}.svg`
+    `cairosvg #{tmp.path}.svg -fpdf > figs/#{base}.pdf`
+end

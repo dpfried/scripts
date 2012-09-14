@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# with help from http://jamie-wong.com/2010/10/16/dfas-and-graphviz-dot/
+# http://jamie-wong.com/2010/10/16/dfas-and-graphviz-dot/
 
 require "yaml"
 
